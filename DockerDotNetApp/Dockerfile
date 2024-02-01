@@ -1,31 +1,22 @@
-
-## Docker va a obtener esta imagen
-FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
-
-## Nombre de la aplicacion
-WORKDIR TestApp
-
-
+FROM mcr.microsoft.com/dotnet/aspnet:6.0 AS base
+WORKDIR /app
 EXPOSE 80
-EXPOSE 5024
+EXPOSE 443
 
-# COPY PROJECT FILES
-COPY ./*.csproj ./
-RUN dotnet restore
-
-# COPY EVERTHING ELSE
+FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
+WORKDIR /src
+COPY ["DockerDotNetApp.csproj", "."]
+RUN dotnet restore "./DockerDotNetApp.csproj"
 COPY . .
-RUN dotnet publish -c Release -o out
+WORKDIR "/src/."
+RUN dotnet build "DockerDotNetApp.csproj" -c Release -o /app/build
 
-# Build Image
-FROM mcr.microsoft.com/dotnet/sdk:5.0
-WORKDIR /webapp
-COPY --from=build /webapp/out .
+FROM build AS publish
+RUN dotnet publish "DockerDotNetApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "DockerDotNetApp.dll"]
-
-
-
-
-
 
 
